@@ -844,6 +844,341 @@ def missoes_dificuldade():
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
+# CRUD - ITENS
+# ============================================================
+
+@app.route('/itens/criar', methods=['POST'])
+def criar_item():
+    """Criar novo item"""
+    try:
+        data = request.get_json()
+        
+        # Validar campos obrigatórios
+        campos_obrigatorios = ['nome', 'tipo', 'raridade', 'valor']
+        for campo in campos_obrigatorios:
+            if campo not in data:
+                return jsonify({'error': f'Campo obrigatório faltando: {campo}'}), 400
+        
+        # Criar documento
+        resultado = es.index(index='rpg_itens', body=data)
+        
+        return jsonify({
+            'mensagem': 'Item criado com sucesso',
+            'id': resultado['_id'],
+            'item': data
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/itens/<item_id>', methods=['GET'])
+def obter_item(item_id):
+    """Obter item específico"""
+    try:
+        resultado = es.get(index='rpg_itens', id=item_id)
+        return jsonify({'item': resultado['_source'], 'id': resultado['_id']})
+    except Exception as e:
+        return jsonify({'error': 'Item não encontrado'}), 404
+
+
+@app.route('/itens/<item_id>', methods=['PUT'])
+def atualizar_item(item_id):
+    """Atualizar item"""
+    try:
+        data = request.get_json()
+        
+        # Validar que item existe
+        es.get(index='rpg_itens', id=item_id)
+        
+        # Atualizar
+        resultado = es.index(index='rpg_itens', id=item_id, body=data)
+        
+        return jsonify({
+            'mensagem': 'Item atualizado com sucesso',
+            'id': item_id,
+            'item': data
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/itens/<item_id>', methods=['DELETE'])
+def deletar_item(item_id):
+    """Deletar item"""
+    try:
+        # Verificar que existe
+        es.get(index='rpg_itens', id=item_id)
+        
+        # Deletar
+        es.delete(index='rpg_itens', id=item_id)
+        
+        return jsonify({'mensagem': f'Item {item_id} deletado com sucesso'})
+        
+    except Exception as e:
+        return jsonify({'error': 'Item não encontrado'}), 404
+
+
+@app.route('/itens', methods=['GET'])
+def listar_itens():
+    """Listar todos os itens (com paginação)"""
+    try:
+        pagina = int(request.args.get('pagina', 1))
+        tamanho = int(request.args.get('tamanho', 10))
+        
+        if pagina < 1:
+            pagina = 1
+        if tamanho > 100:
+            tamanho = 100
+        
+        inicio = (pagina - 1) * tamanho
+        
+        query = {
+            "query": {"match_all": {}},
+            "size": tamanho,
+            "from": inicio
+        }
+        
+        resp = es.search(index='rpg_itens', body=query)
+        
+        itens = []
+        for hit in resp['hits']['hits']:
+            item = hit['_source']
+            item['id'] = hit['_id']
+            itens.append(item)
+        
+        return jsonify({
+            'itens': itens,
+            'total': resp['hits']['total']['value'],
+            'pagina': pagina,
+            'tamanho': tamanho
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============================================================
+# CRUD - PERSONAGENS
+# ============================================================
+
+@app.route('/personagens/criar', methods=['POST'])
+def criar_personagem():
+    """Criar novo personagem"""
+    try:
+        data = request.get_json()
+        
+        # Validar campos obrigatórios
+        campos_obrigatorios = ['nome', 'classe', 'raca', 'nivel']
+        for campo in campos_obrigatorios:
+            if campo not in data:
+                return jsonify({'error': f'Campo obrigatório faltando: {campo}'}), 400
+        
+        resultado = es.index(index='rpg_personagens', body=data)
+        
+        return jsonify({
+            'mensagem': 'Personagem criado com sucesso',
+            'id': resultado['_id'],
+            'personagem': data
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/personagens/<pessoa_id>', methods=['GET'])
+def obter_personagem(pessoa_id):
+    """Obter personagem específico"""
+    try:
+        resultado = es.get(index='rpg_personagens', id=pessoa_id)
+        return jsonify({'personagem': resultado['_source'], 'id': resultado['_id']})
+    except Exception as e:
+        return jsonify({'error': 'Personagem não encontrado'}), 404
+
+
+@app.route('/personagens/<pessoa_id>', methods=['PUT'])
+def atualizar_personagem(pessoa_id):
+    """Atualizar personagem"""
+    try:
+        data = request.get_json()
+        
+        # Validar que existe
+        es.get(index='rpg_personagens', id=pessoa_id)
+        
+        resultado = es.index(index='rpg_personagens', id=pessoa_id, body=data)
+        
+        return jsonify({
+            'mensagem': 'Personagem atualizado com sucesso',
+            'id': pessoa_id,
+            'personagem': data
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/personagens/<pessoa_id>', methods=['DELETE'])
+def deletar_personagem(pessoa_id):
+    """Deletar personagem"""
+    try:
+        es.get(index='rpg_personagens', id=pessoa_id)
+        es.delete(index='rpg_personagens', id=pessoa_id)
+        
+        return jsonify({'mensagem': f'Personagem {pessoa_id} deletado com sucesso'})
+        
+    except Exception as e:
+        return jsonify({'error': 'Personagem não encontrado'}), 404
+
+
+@app.route('/personagens', methods=['GET'])
+def listar_personagens():
+    """Listar todos os personagens (com paginação)"""
+    try:
+        pagina = int(request.args.get('pagina', 1))
+        tamanho = int(request.args.get('tamanho', 10))
+        
+        if pagina < 1:
+            pagina = 1
+        if tamanho > 100:
+            tamanho = 100
+        
+        inicio = (pagina - 1) * tamanho
+        
+        query = {
+            "query": {"match_all": {}},
+            "size": tamanho,
+            "from": inicio
+        }
+        
+        resp = es.search(index='rpg_personagens', body=query)
+        
+        personagens = []
+        for hit in resp['hits']['hits']:
+            pessoa = hit['_source']
+            pessoa['id'] = hit['_id']
+            personagens.append(pessoa)
+        
+        return jsonify({
+            'personagens': personagens,
+            'total': resp['hits']['total']['value'],
+            'pagina': pagina,
+            'tamanho': tamanho
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============================================================
+# CRUD - MISSÕES
+# ============================================================
+
+@app.route('/missoes/criar', methods=['POST'])
+def criar_missao():
+    """Criar nova missão"""
+    try:
+        data = request.get_json()
+        
+        # Validar campos obrigatórios
+        campos_obrigatorios = ['titulo', 'dificuldade', 'tipo', 'recompensa_ouro']
+        for campo in campos_obrigatorios:
+            if campo not in data:
+                return jsonify({'error': f'Campo obrigatório faltando: {campo}'}), 400
+        
+        resultado = es.index(index='rpg_missoes', body=data)
+        
+        return jsonify({
+            'mensagem': 'Missão criada com sucesso',
+            'id': resultado['_id'],
+            'missao': data
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/missoes/<missao_id>', methods=['GET'])
+def obter_missao(missao_id):
+    """Obter missão específica"""
+    try:
+        resultado = es.get(index='rpg_missoes', id=missao_id)
+        return jsonify({'missao': resultado['_source'], 'id': resultado['_id']})
+    except Exception as e:
+        return jsonify({'error': 'Missão não encontrada'}), 404
+
+
+@app.route('/missoes/<missao_id>', methods=['PUT'])
+def atualizar_missao(missao_id):
+    """Atualizar missão"""
+    try:
+        data = request.get_json()
+        
+        # Validar que existe
+        es.get(index='rpg_missoes', id=missao_id)
+        
+        resultado = es.index(index='rpg_missoes', id=missao_id, body=data)
+        
+        return jsonify({
+            'mensagem': 'Missão atualizada com sucesso',
+            'id': missao_id,
+            'missao': data
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/missoes/<missao_id>', methods=['DELETE'])
+def deletar_missao(missao_id):
+    """Deletar missão"""
+    try:
+        es.get(index='rpg_missoes', id=missao_id)
+        es.delete(index='rpg_missoes', id=missao_id)
+        
+        return jsonify({'mensagem': f'Missão {missao_id} deletada com sucesso'})
+        
+    except Exception as e:
+        return jsonify({'error': 'Missão não encontrada'}), 404
+
+
+@app.route('/missoes', methods=['GET'])
+def listar_missoes():
+    """Listar todas as missões (com paginação)"""
+    try:
+        pagina = int(request.args.get('pagina', 1))
+        tamanho = int(request.args.get('tamanho', 10))
+        
+        if pagina < 1:
+            pagina = 1
+        if tamanho > 100:
+            tamanho = 100
+        
+        inicio = (pagina - 1) * tamanho
+        
+        query = {
+            "query": {"match_all": {}},
+            "size": tamanho,
+            "from": inicio
+        }
+        
+        resp = es.search(index='rpg_missoes', body=query)
+        
+        missoes = []
+        for hit in resp['hits']['hits']:
+            missao = hit['_source']
+            missao['id'] = hit['_id']
+            missoes.append(missao)
+        
+        return jsonify({
+            'missoes': missoes,
+            'total': resp['hits']['total']['value'],
+            'pagina': pagina,
+            'tamanho': tamanho
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============================================================
 # EXECUTAR APP
 # ============================================================
 if __name__ == '__main__':

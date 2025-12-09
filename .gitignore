@@ -1,0 +1,75 @@
+# 🔒 GITIGNORE - RPG Search
+# Este arquivo diz ao Git quais arquivos ignorar
+
+# ============================================================
+# VIRTUAL ENVIRONMENT
+# ============================================================
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# ============================================================
+# CACHE PYTHON
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+
+# ============================================================
+# IDE
+# ============================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ============================================================
+# OS SPECIFIC
+# ============================================================
+Thumbs.db
+.DS_Store
+
+# ============================================================
+# DOCUMENTAÇÃO (OPCIONAL - Descomente se quiser ignorar)
+# ============================================================
+# SETUP.md
+# INICIO_RAPIDO.md
+# IMPLEMENTACAO.md
+# ESTRUTURA.md
+# COMANDOS.md
+# RESUMO.md
+# FINALIZADO.md
+# TAXA_EXPLICACAO.md
+# VERIFICACAO.md
+# INDICE.md
+# INICIO.txt
+# CRUD.md
+# CRUD_RAPIDO.md
+# CRUD_STATUS.md
+# CRUD_EXEMPLOS.md
+# PROJETO_COMPLETO.md
+
+# ============================================================
+# SCRIPTS DE AUTOMAÇÃO (OPCIONAL - Descomente se quiser ignorar)
+# ============================================================
+# startup.bat
+# startup.sh
+
+# ============================================================
+# ARQUIVOS CONFIDENCIAIS
+# ============================================================
+*.env
+.env.local
+.env.*.local
+secrets.txt
+credentials.json

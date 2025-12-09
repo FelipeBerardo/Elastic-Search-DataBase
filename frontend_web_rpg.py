@@ -759,7 +759,8 @@ if modulo == "Itens":
             "🎯 Filtros",
             "📊 Dashboard",
             "🎁 Similares",
-            "🔎 Busca Avançada"
+            "🔎 Busca Avançada",
+            "⚙️ Gerenciar Itens"
         ]
     )
 elif modulo == "Personagens":
@@ -769,7 +770,8 @@ elif modulo == "Personagens":
             "🔍 Busca Personagens",
             "🎯 Filtrar Personagens",
             "📊 Dashboard Personagens",
-            "🏆 Top Personagens"
+            "🏆 Top Personagens",
+            "⚙️ Gerenciar Personagens"
         ]
     )
 else:  # Missões
@@ -779,7 +781,8 @@ else:  # Missões
             "🔍 Busca Missões",
             "🎯 Filtrar Missões",
             "📊 Dashboard Missões",
-            "🏆 Missões por Dificuldade"
+            "🏆 Missões por Dificuldade",
+            "⚙️ Gerenciar Missões"
         ]
     )
 
@@ -1376,6 +1379,371 @@ def pagina_missoes_dificuldade():
                     st.error("Erro ao carregar")
 
 # ============================================================
+# PÁGINA: GERENCIAR ITENS (CRUD)
+# ============================================================
+
+def pagina_gerenciar_itens():
+    st.header("⚙️ Gerenciar Itens")
+    
+    opcao = st.radio("Escolha a operação:", ["Criar", "Atualizar", "Deletar", "Listar"])
+    
+    if opcao == "Criar":
+        st.subheader("✨ Criar Novo Item")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            nome = st.text_input("Nome do Item")
+            tipo = st.selectbox("Tipo", ["Arma", "Armadura", "Acessório", "Consumível", "Mágico", "Questão"])
+        with col2:
+            raridade = st.selectbox("Raridade", ["Comum", "Incomum", "Raro", "Épico", "Lendário", "Mítico"])
+            valor = st.number_input("Valor (ouro)", min_value=1, value=100)
+        
+        descricao = st.text_area("Descrição")
+        
+        if st.button("✅ Criar Item"):
+            try:
+                data = {
+                    "nome": nome,
+                    "tipo": tipo,
+                    "raridade": raridade,
+                    "valor": valor,
+                    "descricao": descricao
+                }
+                resp = requests.post(f"{API_URL}/itens/criar", json=data, timeout=10)
+                if resp.status_code == 201:
+                    resultado = resp.json()
+                    st.success(f"✅ {resultado['mensagem']}")
+                    st.json(resultado['item'])
+                else:
+                    st.error(f"Erro: {resp.json().get('error', 'Desconhecido')}")
+            except Exception as e:
+                st.error(f"Erro ao conectar: {str(e)}")
+    
+    elif opcao == "Atualizar":
+        st.subheader("🔄 Atualizar Item")
+        item_id = st.text_input("ID do Item")
+        
+        if st.button("🔍 Carregar"):
+            try:
+                resp = requests.get(f"{API_URL}/itens/{item_id}", timeout=10)
+                if resp.status_code == 200:
+                    item = resp.json()['item']
+                    st.write("Dados atuais:")
+                    st.json(item)
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        novo_nome = st.text_input("Nome", value=item.get('nome', ''))
+                        novo_tipo = st.selectbox("Tipo", ["Arma", "Armadura", "Acessório", "Consumível", "Mágico", "Questão"], 
+                                                index=["Arma", "Armadura", "Acessório", "Consumível", "Mágico", "Questão"].index(item.get('tipo', 'Arma')))
+                    with col2:
+                        novo_raridade = st.selectbox("Raridade", ["Comum", "Incomum", "Raro", "Épico", "Lendário", "Mítico"],
+                                                    index=["Comum", "Incomum", "Raro", "Épico", "Lendário", "Mítico"].index(item.get('raridade', 'Comum')))
+                        novo_valor = st.number_input("Valor", value=item.get('valor', 0))
+                    
+                    novo_desc = st.text_area("Descrição", value=item.get('descricao', ''))
+                    
+                    if st.button("💾 Salvar Alterações"):
+                        data = {
+                            "nome": novo_nome,
+                            "tipo": novo_tipo,
+                            "raridade": novo_raridade,
+                            "valor": novo_valor,
+                            "descricao": novo_desc
+                        }
+                        resp = requests.put(f"{API_URL}/itens/{item_id}", json=data, timeout=10)
+                        if resp.status_code == 200:
+                            st.success("✅ Item atualizado com sucesso!")
+                        else:
+                            st.error(f"Erro: {resp.json().get('error', 'Desconhecido')}")
+                else:
+                    st.error("Item não encontrado")
+            except Exception as e:
+                st.error(f"Erro: {str(e)}")
+    
+    elif opcao == "Deletar":
+        st.subheader("🗑️ Deletar Item")
+        item_id = st.text_input("ID do Item a deletar")
+        
+        if st.button("⚠️ Deletar"):
+            try:
+                resp = requests.delete(f"{API_URL}/itens/{item_id}", timeout=10)
+                if resp.status_code == 200:
+                    st.success(f"✅ {resp.json()['mensagem']}")
+                else:
+                    st.error("Item não encontrado")
+            except Exception as e:
+                st.error(f"Erro: {str(e)}")
+    
+    elif opcao == "Listar":
+        st.subheader("📋 Listar Itens")
+        pagina = st.number_input("Página", min_value=1, value=1)
+        tamanho = st.slider("Itens por página", min_value=5, max_value=50, value=10)
+        
+        try:
+            resp = requests.get(f"{API_URL}/itens", params={"pagina": pagina, "tamanho": tamanho}, timeout=10)
+            if resp.status_code == 200:
+                resultado = resp.json()
+                st.metric("Total de Itens", resultado['total'])
+                
+                df_data = []
+                for item in resultado['itens']:
+                    df_data.append({
+                        'ID': item['id'],
+                        'Nome': item.get('nome', 'N/A'),
+                        'Tipo': item.get('tipo', 'N/A'),
+                        'Raridade': item.get('raridade', 'N/A'),
+                        'Valor': item.get('valor', 0)
+                    })
+                
+                df = pd.DataFrame(df_data)
+                st.dataframe(df, use_container_width=True, hide_index=True)
+        except Exception as e:
+            st.error(f"Erro: {str(e)}")
+
+# ============================================================
+# PÁGINA: GERENCIAR PERSONAGENS (CRUD)
+# ============================================================
+
+def pagina_gerenciar_personagens():
+    st.header("⚙️ Gerenciar Personagens")
+    
+    opcao = st.radio("Escolha a operação:", ["Criar", "Atualizar", "Deletar", "Listar"])
+    
+    if opcao == "Criar":
+        st.subheader("✨ Criar Novo Personagem")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            nome = st.text_input("Nome")
+            classe = st.selectbox("Classe", ["Guerreiro", "Mago", "Assassino", "Paladino", "Ranger", "Bardo", "Druida", "Clérigo"])
+        with col2:
+            raca = st.selectbox("Raça", ["Humano", "Elfo", "Anão", "Gnomo", "Meio-Orc", "Meio-Elfo", "Tiefling", "Dracônico"])
+            nivel = st.number_input("Nível", min_value=1, max_value=20, value=1)
+        
+        if st.button("✅ Criar Personagem"):
+            try:
+                data = {
+                    "nome": nome,
+                    "classe": classe,
+                    "raca": raca,
+                    "nivel": nivel,
+                    "status": "Ativo"
+                }
+                resp = requests.post(f"{API_URL}/personagens/criar", json=data, timeout=10)
+                if resp.status_code == 201:
+                    resultado = resp.json()
+                    st.success(f"✅ {resultado['mensagem']}")
+                    st.json(resultado['personagem'])
+                else:
+                    st.error(f"Erro: {resp.json().get('error', 'Desconhecido')}")
+            except Exception as e:
+                st.error(f"Erro: {str(e)}")
+    
+    elif opcao == "Atualizar":
+        st.subheader("🔄 Atualizar Personagem")
+        pessoa_id = st.text_input("ID do Personagem")
+        
+        if st.button("🔍 Carregar"):
+            try:
+                resp = requests.get(f"{API_URL}/personagens/{pessoa_id}", timeout=10)
+                if resp.status_code == 200:
+                    pessoa = resp.json()['personagem']
+                    st.write("Dados atuais:")
+                    st.json(pessoa)
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        novo_nome = st.text_input("Nome", value=pessoa.get('nome', ''))
+                        novo_classe = st.selectbox("Classe", ["Guerreiro", "Mago", "Assassino", "Paladino", "Ranger", "Bardo", "Druida", "Clérigo"],
+                                                  index=["Guerreiro", "Mago", "Assassino", "Paladino", "Ranger", "Bardo", "Druida", "Clérigo"].index(pessoa.get('classe', 'Guerreiro')))
+                    with col2:
+                        novo_raca = st.selectbox("Raça", ["Humano", "Elfo", "Anão", "Gnomo", "Meio-Orc", "Meio-Elfo", "Tiefling", "Dracônico"],
+                                                index=["Humano", "Elfo", "Anão", "Gnomo", "Meio-Orc", "Meio-Elfo", "Tiefling", "Dracônico"].index(pessoa.get('raca', 'Humano')))
+                        novo_nivel = st.number_input("Nível", min_value=1, max_value=20, value=pessoa.get('nivel', 1))
+                    
+                    if st.button("💾 Salvar Alterações"):
+                        data = {
+                            "nome": novo_nome,
+                            "classe": novo_classe,
+                            "raca": novo_raca,
+                            "nivel": novo_nivel,
+                            "status": pessoa.get('status', 'Ativo')
+                        }
+                        resp = requests.put(f"{API_URL}/personagens/{pessoa_id}", json=data, timeout=10)
+                        if resp.status_code == 200:
+                            st.success("✅ Personagem atualizado com sucesso!")
+                        else:
+                            st.error(f"Erro: {resp.json().get('error', 'Desconhecido')}")
+                else:
+                    st.error("Personagem não encontrado")
+            except Exception as e:
+                st.error(f"Erro: {str(e)}")
+    
+    elif opcao == "Deletar":
+        st.subheader("🗑️ Deletar Personagem")
+        pessoa_id = st.text_input("ID do Personagem a deletar")
+        
+        if st.button("⚠️ Deletar"):
+            try:
+                resp = requests.delete(f"{API_URL}/personagens/{pessoa_id}", timeout=10)
+                if resp.status_code == 200:
+                    st.success(f"✅ {resp.json()['mensagem']}")
+                else:
+                    st.error("Personagem não encontrado")
+            except Exception as e:
+                st.error(f"Erro: {str(e)}")
+    
+    elif opcao == "Listar":
+        st.subheader("📋 Listar Personagens")
+        pagina = st.number_input("Página", min_value=1, value=1)
+        tamanho = st.slider("Personagens por página", min_value=5, max_value=50, value=10)
+        
+        try:
+            resp = requests.get(f"{API_URL}/personagens", params={"pagina": pagina, "tamanho": tamanho}, timeout=10)
+            if resp.status_code == 200:
+                resultado = resp.json()
+                st.metric("Total de Personagens", resultado['total'])
+                
+                df_data = []
+                for pessoa in resultado['personagens']:
+                    df_data.append({
+                        'ID': pessoa['id'],
+                        'Nome': pessoa.get('nome', 'N/A'),
+                        'Classe': pessoa.get('classe', 'N/A'),
+                        'Raça': pessoa.get('raca', 'N/A'),
+                        'Nível': pessoa.get('nivel', 0)
+                    })
+                
+                df = pd.DataFrame(df_data)
+                st.dataframe(df, use_container_width=True, hide_index=True)
+        except Exception as e:
+            st.error(f"Erro: {str(e)}")
+
+# ============================================================
+# PÁGINA: GERENCIAR MISSÕES (CRUD)
+# ============================================================
+
+def pagina_gerenciar_missoes():
+    st.header("⚙️ Gerenciar Missões")
+    
+    opcao = st.radio("Escolha a operação:", ["Criar", "Atualizar", "Deletar", "Listar"])
+    
+    if opcao == "Criar":
+        st.subheader("✨ Criar Nova Missão")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            titulo = st.text_input("Título da Missão")
+            dificuldade = st.selectbox("Dificuldade", ["Fácil", "Normal", "Difícil", "Muito Difícil", "Lendário"])
+        with col2:
+            tipo = st.selectbox("Tipo", ["Eliminar", "Coletar", "Explorar", "Proteger", "Investigar", "Resgate", "Entrega", "Assassinato"])
+            recompensa = st.number_input("Recompensa (ouro)", min_value=1, value=500)
+        
+        descricao = st.text_area("Descrição")
+        
+        if st.button("✅ Criar Missão"):
+            try:
+                data = {
+                    "titulo": titulo,
+                    "dificuldade": dificuldade,
+                    "tipo": tipo,
+                    "recompensa_ouro": recompensa,
+                    "descricao": descricao
+                }
+                resp = requests.post(f"{API_URL}/missoes/criar", json=data, timeout=10)
+                if resp.status_code == 201:
+                    resultado = resp.json()
+                    st.success(f"✅ {resultado['mensagem']}")
+                    st.json(resultado['missao'])
+                else:
+                    st.error(f"Erro: {resp.json().get('error', 'Desconhecido')}")
+            except Exception as e:
+                st.error(f"Erro: {str(e)}")
+    
+    elif opcao == "Atualizar":
+        st.subheader("🔄 Atualizar Missão")
+        missao_id = st.text_input("ID da Missão")
+        
+        if st.button("🔍 Carregar"):
+            try:
+                resp = requests.get(f"{API_URL}/missoes/{missao_id}", timeout=10)
+                if resp.status_code == 200:
+                    missao = resp.json()['missao']
+                    st.write("Dados atuais:")
+                    st.json(missao)
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        novo_titulo = st.text_input("Título", value=missao.get('titulo', ''))
+                        novo_dificuldade = st.selectbox("Dificuldade", ["Fácil", "Normal", "Difícil", "Muito Difícil", "Lendário"],
+                                                       index=["Fácil", "Normal", "Difícil", "Muito Difícil", "Lendário"].index(missao.get('dificuldade', 'Normal')))
+                    with col2:
+                        novo_tipo = st.selectbox("Tipo", ["Eliminar", "Coletar", "Explorar", "Proteger", "Investigar", "Resgate", "Entrega", "Assassinato"],
+                                                index=["Eliminar", "Coletar", "Explorar", "Proteger", "Investigar", "Resgate", "Entrega", "Assassinato"].index(missao.get('tipo', 'Eliminar')))
+                        novo_recompensa = st.number_input("Recompensa", value=missao.get('recompensa_ouro', 0))
+                    
+                    novo_desc = st.text_area("Descrição", value=missao.get('descricao', ''))
+                    
+                    if st.button("💾 Salvar Alterações"):
+                        data = {
+                            "titulo": novo_titulo,
+                            "dificuldade": novo_dificuldade,
+                            "tipo": novo_tipo,
+                            "recompensa_ouro": novo_recompensa,
+                            "descricao": novo_desc
+                        }
+                        resp = requests.put(f"{API_URL}/missoes/{missao_id}", json=data, timeout=10)
+                        if resp.status_code == 200:
+                            st.success("✅ Missão atualizada com sucesso!")
+                        else:
+                            st.error(f"Erro: {resp.json().get('error', 'Desconhecido')}")
+                else:
+                    st.error("Missão não encontrada")
+            except Exception as e:
+                st.error(f"Erro: {str(e)}")
+    
+    elif opcao == "Deletar":
+        st.subheader("🗑️ Deletar Missão")
+        missao_id = st.text_input("ID da Missão a deletar")
+        
+        if st.button("⚠️ Deletar"):
+            try:
+                resp = requests.delete(f"{API_URL}/missoes/{missao_id}", timeout=10)
+                if resp.status_code == 200:
+                    st.success(f"✅ {resp.json()['mensagem']}")
+                else:
+                    st.error("Missão não encontrada")
+            except Exception as e:
+                st.error(f"Erro: {str(e)}")
+    
+    elif opcao == "Listar":
+        st.subheader("📋 Listar Missões")
+        pagina = st.number_input("Página", min_value=1, value=1)
+        tamanho = st.slider("Missões por página", min_value=5, max_value=50, value=10)
+        
+        try:
+            resp = requests.get(f"{API_URL}/missoes", params={"pagina": pagina, "tamanho": tamanho}, timeout=10)
+            if resp.status_code == 200:
+                resultado = resp.json()
+                st.metric("Total de Missões", resultado['total'])
+                
+                df_data = []
+                for missao in resultado['missoes']:
+                    df_data.append({
+                        'ID': missao['id'],
+                        'Título': missao.get('titulo', 'N/A'),
+                        'Tipo': missao.get('tipo', 'N/A'),
+                        'Dificuldade': missao.get('dificuldade', 'N/A'),
+                        'Recompensa': missao.get('recompensa_ouro', 0)
+                    })
+                
+                df = pd.DataFrame(df_data)
+                st.dataframe(df, use_container_width=True, hide_index=True)
+        except Exception as e:
+            st.error(f"Erro: {str(e)}")
+
+# ============================================================
 # RENDERIZAR PÁGINA SELECIONADA
 # ============================================================
 
@@ -1390,6 +1758,8 @@ if modulo == "Itens":
         pagina_similares()
     elif pagina == "🔎 Busca Avançada":
         pagina_busca_avancada()
+    elif pagina == "⚙️ Gerenciar Itens":
+        pagina_gerenciar_itens()
 
 elif modulo == "Personagens":
     if pagina == "🔍 Busca Personagens":
@@ -1400,6 +1770,8 @@ elif modulo == "Personagens":
         pagina_dashboard_personagens()
     elif pagina == "🏆 Top Personagens":
         pagina_top_personagens()
+    elif pagina == "⚙️ Gerenciar Personagens":
+        pagina_gerenciar_personagens()
 
 elif modulo == "Missões":
     if pagina == "🔍 Busca Missões":
@@ -1410,3 +1782,5 @@ elif modulo == "Missões":
         pagina_dashboard_missoes()
     elif pagina == "🏆 Missões por Dificuldade":
         pagina_missoes_dificuldade()
+    elif pagina == "⚙️ Gerenciar Missões":
+        pagina_gerenciar_missoes()
